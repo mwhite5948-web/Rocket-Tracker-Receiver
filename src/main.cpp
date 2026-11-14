@@ -27,6 +27,11 @@ void SERCOM3_Handler() { BTSerial.IrqHandler(); }
 const double EARTH_RADIUS_FT = 20902231.0;  // mean radius, 6371 km
 const double M_TO_FT = 3.28084;
 
+// Periodic status line so the phone sees the link is alive (and gets the
+// receiver's own position) even when no rocket packets are arriving.
+const unsigned long STATUS_INTERVAL_MS = 2000;
+unsigned long lastStatusMs = 0;
+
 int32_t lastSeq = -1;
 uint32_t received = 0;
 uint32_t lost = 0;
@@ -102,6 +107,17 @@ void loop() {
     localAltM = GPS.altitude();
     localSats = GPS.satellites();
     haveLocalFix = true;
+  }
+
+  if (millis() - lastStatusMs >= STATUS_INTERVAL_MS) {
+    lastStatusMs = millis();
+    if (haveLocalFix) {
+      out("  Receiver: "); out(localLat, 7); out(","); out(localLon, 7);
+      out(" sats=");       out(localSats);
+    } else {
+      out("  Receiver: no GPS fix yet");
+    }
+    outln();
   }
 
   int size = LoRa.parsePacket();
